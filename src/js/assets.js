@@ -1,9 +1,10 @@
-import { Loader } from 'resource-loader';
+import {
+  Loader
+} from 'resource-loader';
 import bidello from 'bidello';
 import deferred from '/js/utils/deferred';
 
-const RESOURCES = [
-  {
+const RESOURCES = [{
     name: 'photo',
     url: require('/assets/photo.jpg')
   },
@@ -36,7 +37,9 @@ class Assets {
     this.deferred = deferred();
     this.loader = new Loader();
 
-    bidello.trigger({ name: 'loadStart' });
+    bidello.trigger({
+      name: 'loadStart'
+    });
 
     RESOURCES.forEach(res => {
       this.loader.add(res);
@@ -49,7 +52,11 @@ class Assets {
   }
 
   onProgress(loader, meta) {
-    bidello.trigger({ name: 'loadProgress' }, { progress: this.loader.progress });
+    bidello.trigger({
+      name: 'loadProgress'
+    }, {
+      progress: this.loader.progress
+    });
     const res = this.resources[meta.name];
     res.meta = meta;
     res.loading.resolve(res);
@@ -57,7 +64,11 @@ class Assets {
 
   finish() {
     this.deferred.resolve();
-    bidello.trigger({ name: 'loadEnd' }, { resources: this.resources });
+    bidello.trigger({
+      name: 'loadEnd'
+    }, {
+      resources: this.resources
+    });
   }
 }
 

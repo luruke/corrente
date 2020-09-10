@@ -1,5 +1,10 @@
-import { PerspectiveCamera, Vector3 } from "three";
-import { component } from "bidello";
+import {
+  PerspectiveCamera,
+  Vector3
+} from "three";
+import {
+  component
+} from "bidello";
 import OrbitControls from "orbit-controls-es6";
 import renderer from "/js/renderer";
 
@@ -9,7 +14,7 @@ class Camera extends component(PerspectiveCamera) {
   }
 
   init() {
-    this.position.set(0, 0, 10);
+    this.position.set(90, 40, 0);
     this.lookAt(new Vector3(0, 0, 0));
     this.initOrbitControl();
   }
@@ -33,7 +38,9 @@ class Camera extends component(PerspectiveCamera) {
     };
   }
 
-  onResize({ ratio }) {
+  onResize({
+    ratio
+  }) {
     this.aspect = ratio;
     this.unit = this.calculateUnitSize();
     this.updateProjectionMatrix();

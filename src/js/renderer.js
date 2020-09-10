@@ -1,5 +1,10 @@
-import { WebGLRenderer } from 'three';
-import { component } from 'bidello';
+import {
+  WebGLRenderer,
+  PCFSoftShadowMap
+} from 'three';
+import {
+  component
+} from 'bidello';
 import settings from './settings';
 
 class Renderer extends component(WebGLRenderer) {
@@ -13,10 +18,16 @@ class Renderer extends component(WebGLRenderer) {
     // this.gammaInput = true;
     // this.gammaOutput = true;
 
+    this.shadowMap.enabled = true;
+    // this.shadowMap.type = PCFSoftShadowMap;
+
     this.setPixelRatio(settings.dpr);
   }
 
-  onResize({ width, height }) {
+  onResize({
+    width,
+    height
+  }) {
     this.setSize(width, height);
   }
 }

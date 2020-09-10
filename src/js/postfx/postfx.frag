@@ -76,7 +76,7 @@ void main() {
     vec3 color = texture2D(uScene, uv).rgb;
   #endif
 
-  color = linearToneMapping(color);
+  // color = linearToneMapping(color);
 
   gl_FragColor = vec4(color, 1.0);
 }

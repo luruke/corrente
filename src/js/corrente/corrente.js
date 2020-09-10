@@ -9,17 +9,23 @@ import {
   Plane,
   Vector3,
   Raycaster,
+  MeshDepthMaterial,
+  RGBADepthPacking,
 } from "three";
 
-import { component } from "bidello";
+import {
+  component
+} from "bidello";
 // import MagicShader from 'magicshader';
 // import trail from '/js/utils/trail';
+
+import settings from '../settings'
 
 import FBO from "../utils/fbo";
 import Capsule from "./Capsule";
 import camera from "../camera";
 
-const GRID = 128;
+const GRID = settings.count;
 
 export default class extends component(Object3D) {
   init() {
@@ -27,20 +33,23 @@ export default class extends component(Object3D) {
     this.initFBO();
 
     this.geometry = new Capsule(
-      0.3, // radius top
+      0.25, // radius top
       0.2, // radius bottom
       6.6, // height
       7, // radial segments
-      4, // height segment
-      8, // cap top segments
+      6, // height segment
+      4, // cap top segments
       1 // cap bottom segments
     );
 
     // this.uniforms = {};
 
     this.material = new MeshStandardMaterial({
+      // transparent: true,
       color: 0x2194ce,
       emissive: 0x000000,
+      roughness: 0,
+      metalness: 0,
       onBeforeCompile: (shader) => {
         shader.vertexShader = shader.vertexShader.replace(
           "#include <common>",
@@ -48,6 +57,8 @@ export default class extends component(Object3D) {
             #include <common>
             uniform highp sampler2D uWind;
             attribute vec2 ids;
+
+            varying vec2 vUv;
 
             mat4 rotationMatrix(vec3 axis, float angle) {
               axis = normalize(axis);
@@ -60,7 +71,14 @@ export default class extends component(Object3D) {
                           oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c,           0.0,
                           0.0,                                0.0,                                0.0,                                1.0);
           }
-          
+
+          #ifndef HALF_PI
+            # define HALF_PI 1.5707963267948966
+          # endif
+
+          float sineOut(float t) {
+            return sin(t * HALF_PI);
+          }
         `
         );
 
@@ -68,14 +86,13 @@ export default class extends component(Object3D) {
           "#include <project_vertex>",
           `
 
-            // transformed.y += texture2D(uWind, ids).r * 20.0;
-            // transformed.y += ids.x * 1.0;
+            vUv = uv;
 
             vec4 data = texture2D(uWind, ids);
-            float force = data.r * 3.14;
+            float force = data.r * (3.14 / 2.0);
             float forcePointer = data.g;
 
-            force += transformed.y * 0.01;
+            force += sineOut(uv.y) * 0.5;
 
             transformed.y += 3.3;
             transformed.xyz = (rotationMatrix(vec3(1.0, 1.0, 1.0), force) * vec4(transformed, 1.0)).xyz;
@@ -86,7 +103,27 @@ export default class extends component(Object3D) {
           `
         );
 
-        shader.uniforms.uWind = { value: this.fbo.target };
+        shader.fragmentShader = shader.fragmentShader.replace(
+          "#include <common>",
+          `
+            #include <common>
+            varying vec2 vUv;
+        `
+        );
+
+        shader.fragmentShader = shader.fragmentShader.replace(
+          "	#include <dithering_fragment>",
+          `
+            #include <dithering_fragment>
+            gl_FragColor.a *= smoothstep(0.0, 0.35, vUv.y);
+            gl_FragColor.rgb *= smoothstep(0.0, 0.95, vUv.y);
+        `
+        );
+
+
+        shader.uniforms.uWind = {
+          value: this.fbo.target
+        };
         this.shader = shader;
 
         // this.uniforms = shader.uniforms;
@@ -110,6 +147,69 @@ export default class extends component(Object3D) {
     );
 
     this.mesh = new InstancedMesh(this.geometry, this.material, count);
+    this.mesh.receiveShadow = true;
+    this.mesh.castShadow = true;
+    this.mesh.customDepthMaterial = new MeshDepthMaterial({
+      depthPacking: RGBADepthPacking,
+      onBeforeCompile: (shader) => {
+        shader.vertexShader = shader.vertexShader.replace(
+          "#include <common>",
+          `
+            #include <common>
+            uniform highp sampler2D uWind;
+            attribute vec2 ids;
+
+            varying vec2 vUv;
+
+            mat4 rotationMatrix(vec3 axis, float angle) {
+              axis = normalize(axis);
+              float s = sin(angle);
+              float c = cos(angle);
+              float oc = 1.0 - c;
+
+              return mat4(oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,  0.0,
+                          oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,  0.0,
+                          oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c,           0.0,
+                          0.0,                                0.0,                                0.0,                                1.0);
+          }
+
+          #ifndef HALF_PI
+            # define HALF_PI 1.5707963267948966
+          # endif
+
+          float sineOut(float t) {
+            return sin(t * HALF_PI);
+          }
+        `
+        );
+
+        shader.vertexShader = shader.vertexShader.replace(
+          "#include <project_vertex>",
+          `
+
+            vUv = uv;
+
+            vec4 data = texture2D(uWind, ids);
+            float force = data.r * (3.14 / 2.0);
+            float forcePointer = data.g;
+
+            force += sineOut(uv.y) * 0.5;
+
+            transformed.y += 3.3;
+            transformed.xyz = (rotationMatrix(vec3(1.0, 1.0, 1.0), force) * vec4(transformed, 1.0)).xyz;
+            transformed.xyz = (rotationMatrix(vec3(1.0, 1.0, 0.0), forcePointer) * vec4(transformed, 1.0)).xyz;
+            transformed.y -= 3.3;
+
+            #include <project_vertex>
+          `
+        );
+
+        shader.uniforms.uWind = {
+          value: this.fbo.target
+        };
+        this.shaderShadow = shader;
+      }
+    });
 
     const matrix = new Matrix4();
 
@@ -134,8 +234,12 @@ export default class extends component(Object3D) {
       name: "wind",
       // debug: true,
       uniforms: {
-        uTime: { value: 0 },
-        uPointer: { value: this.target },
+        uTime: {
+          value: 0
+        },
+        uPointer: {
+          value: this.target
+        },
       },
       shader: /* glsl */ `
         precision highp float;
@@ -229,13 +333,11 @@ export default class extends component(Object3D) {
           vec4 old = texture2D(texture, uv);
           vec4 new = old;
 
-          uv *= 1.5;
+          uv *= RESOLUTION.x * 0.02;
           float noise = snoise(vec3(uv.x, uv.y, uTime * 0.1));
           
           new.r += noise * 0.1;
-          // new.g += distance(gl_FragCoord.xy - (vec2(RESOLUTION) / 2.0), vec2(uPointer.x, -uPointer.z));
           new.g += circle(gl_FragCoord.xy, vec2(uPointer.x, uPointer.z) + (vec2(RESOLUTION) / 2.0), RESOLUTION.x * 0.1, RESOLUTION.x * 0.06) * 0.5;
-          // new.g = clamp(new.g, 0.0, 1.0);
 
           new.r = mix(new.r, 0.0, .1);
           new.g = mix(new.g, 0.0, .04);
@@ -257,24 +359,25 @@ export default class extends component(Object3D) {
     this.target = new Vector3();
   }
 
-  onPointerMove({ pointer }) {
+  onPointerMove({
+    pointer
+  }) {
     this.raycaster.setFromCamera(pointer.normalized, camera);
     this.raycaster.ray.intersectPlane(this.plane, this.target);
-
-    console.log(this.target);
   }
 
-  onRaf({ delta }) {
+  onRaf({
+    delta
+  }) {
     if (this.fbo) {
       this.fbo.uniforms.uTime.value += delta;
       this.fbo.update();
 
       if (this.shader) {
         this.shader.uniforms.uWind.value = this.fbo.target;
-        // this.asda.value = this.fbo.target;
-        // this.asda = { value: this.fbo.target };
-        // this.asda.value.needsUpdate = true;
-        // console.log(this.asda.value);
+      }
+      if (this.shaderShadow) {
+        this.shaderShadow.uniforms.uWind.value = this.fbo.target;
       }
     }
   }
