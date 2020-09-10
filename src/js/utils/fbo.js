@@ -29,7 +29,7 @@ import {
   MeshBasicMaterial,
   RawShaderMaterial,
 } from "three";
-import MagicShader from "magicshader";
+// import MagicShader from "magicshader";
 import renderer from "/js/renderer";
 import triangle from "./triangle";
 import camera from "/js/camera";
@@ -102,8 +102,7 @@ export default class FBO {
           gl_Position = vec4(position, 1.0);
         }
       `,
-      fragmentShader:
-        shader ||
+      fragmentShader: shader ||
         `
         precision highp float;
         uniform sampler2D texture;
@@ -140,8 +139,7 @@ export default class FBO {
     return new WebGLRenderTarget(
       this.options.width,
       this.options.height,
-      Object.assign(
-        {
+      Object.assign({
           minFilter: NearestFilter,
           magFilter: NearestFilter,
           stencilBuffer: false,
@@ -181,9 +179,9 @@ export default class FBO {
     const old = this.rt[this.index];
     const dest = this.rt[destIndex];
 
-    this.material.uniforms.texture.value = this.copyData
-      ? this.texture
-      : old.texture;
+    this.material.uniforms.texture.value = this.copyData ?
+      this.texture :
+      old.texture;
 
     const oldMainTarget = this.renderer.getRenderTarget();
     this.renderer.setRenderTarget(dest);

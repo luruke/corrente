@@ -8,6 +8,23 @@ import {
 import OrbitControls from "orbit-controls-es6";
 import renderer from "/js/renderer";
 
+
+function detectMob() {
+  const toMatch = [
+    /Android/i,
+    /webOS/i,
+    /iPhone/i,
+    /iPad/i,
+    /iPod/i,
+    /BlackBerry/i,
+    /Windows Phone/i
+  ];
+
+  return toMatch.some((toMatchItem) => {
+    return navigator.userAgent.match(toMatchItem);
+  });
+}
+
 class Camera extends component(PerspectiveCamera) {
   constructor() {
     super(35, 0, 0.1, 1000);
@@ -16,7 +33,10 @@ class Camera extends component(PerspectiveCamera) {
   init() {
     this.position.set(90, 40, 0);
     this.lookAt(new Vector3(0, 0, 0));
-    this.initOrbitControl();
+
+    if (!detectMob()) {
+      this.initOrbitControl();
+    }
   }
 
   initOrbitControl() {

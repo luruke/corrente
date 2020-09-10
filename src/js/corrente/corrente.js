@@ -356,7 +356,7 @@ export default class extends component(Object3D) {
   initPlane() {
     this.plane = new Plane(new Vector3(0, 1, 0), 0);
     this.raycaster = new Raycaster();
-    this.target = new Vector3();
+    this.target = new Vector3(10000, 10000, 10000);
   }
 
   onPointerMove({
