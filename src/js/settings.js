@@ -1,4 +1,4 @@
-import { getGPUTier } from 'detect-gpu';
+import { getGPUTier } from "detect-gpu";
 
 const tier = getGPUTier({
   mobileBenchmarkPercentages: [10, 40, 30, 20], // (Default) [TIER_0, TIER_1, TIER_2, TIER_3]

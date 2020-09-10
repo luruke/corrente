@@ -1,11 +1,11 @@
-import * as helpers from './bidello';
-import renderer from './renderer';
-import camera from './camera';
-import scene from './scene';
-import { component } from 'bidello';
-import settings from './settings';
-import postfx from './postfx/postfx';
-import assets from './assets';
+import * as helpers from "./bidello";
+import renderer from "./renderer";
+import camera from "./camera";
+import scene from "./scene";
+import { component } from "bidello";
+import settings from "./settings";
+import postfx from "./postfx/postfx";
+import assets from "./assets";
 
 class Site extends component() {
   init() {
@@ -19,7 +19,7 @@ class Site extends component() {
   }
 
   onLoadEnd() {
-    console.log('finished loader!');
+    console.log("finished loader!");
   }
 }
 

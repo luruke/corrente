@@ -6,6 +6,9 @@ import {
   InstancedBufferAttribute,
   LinearFilter,
   MeshStandardMaterial,
+  Plane,
+  Vector3,
+  Raycaster,
 } from "three";
 
 import { component } from "bidello";
@@ -14,14 +17,18 @@ import { component } from "bidello";
 
 import FBO from "../utils/fbo";
 import Capsule from "./Capsule";
+import camera from "../camera";
+
+const GRID = 128;
 
 export default class extends component(Object3D) {
   init() {
+    this.initPlane();
     this.initFBO();
 
     this.geometry = new Capsule(
       0.3, // radius top
-      0.3, // radius bottom
+      0.2, // radius bottom
       6.6, // height
       7, // radial segments
       4, // height segment
@@ -29,7 +36,7 @@ export default class extends component(Object3D) {
       1 // cap bottom segments
     );
 
-    this.uniforms = {};
+    // this.uniforms = {};
 
     this.material = new MeshStandardMaterial({
       color: 0x2194ce,
@@ -64,30 +71,36 @@ export default class extends component(Object3D) {
             // transformed.y += texture2D(uWind, ids).r * 20.0;
             // transformed.y += ids.x * 1.0;
 
-            float force = texture2D(uWind, ids).r * 3.14;
+            vec4 data = texture2D(uWind, ids);
+            float force = data.r * 3.14;
+            float forcePointer = data.g;
 
             force += transformed.y * 0.01;
 
             transformed.y += 3.3;
-            transformed.xyz = (rotationMatrix(vec3(1.0, 1.0, 0.0), force) * vec4(transformed, 1.0)).xyz;
+            transformed.xyz = (rotationMatrix(vec3(1.0, 1.0, 1.0), force) * vec4(transformed, 1.0)).xyz;
+            transformed.xyz = (rotationMatrix(vec3(1.0, 1.0, 0.0), forcePointer) * vec4(transformed, 1.0)).xyz;
             transformed.y -= 3.3;
 
             #include <project_vertex>
           `
         );
 
-        this.uniforms = shader.uniforms;
         shader.uniforms.uWind = { value: this.fbo.target };
+        this.shader = shader;
+
+        // this.uniforms = shader.uniforms;
+        // this.asda = shader.uniforms.uWind;
       },
     });
 
-    const count = 128 * 128;
+    const count = GRID * GRID;
     const ids = [];
 
-    for (let j = 0; j < 128; j++) {
-      for (let k = 0; k < 128; k++) {
-        ids.push(j / 128);
-        ids.push(k / 128);
+    for (let j = 0; j < GRID; j++) {
+      for (let k = 0; k < GRID; k++) {
+        ids.push(j / GRID);
+        ids.push(k / GRID);
       }
     }
 
@@ -101,54 +114,34 @@ export default class extends component(Object3D) {
     const matrix = new Matrix4();
 
     let i = 0;
-    for (let j = 0; j < 128; j++) {
-      for (let k = 0; k < 128; k++) {
+    for (let j = 0; j < GRID; j++) {
+      for (let k = 0; k < GRID; k++) {
         matrix.setPosition(j + Math.random(), 0, k + Math.random());
         this.mesh.setMatrixAt(i, matrix);
         i++;
       }
     }
 
-    // let radius = 1;
-    // let n = 5;
-    // let tmp = 0;
-
-    // for (let i = 0; i < count; i++) {
-    //   const matrix = new Matrix4();
-    //   const x = radius * Math.cos(i * ((2 * Math.PI) / n));
-    //   const y = radius * Math.sin(i * ((2 * Math.PI) / n));
-
-    //   matrix.setPosition(x, 0, y);
-    //   this.mesh.setMatrixAt(i, matrix);
-
-    //   tmp++;
-    //   if (tmp > n) {
-    //     radius += 1;
-    //     n = parseInt(radius * 1.0);
-    //     tmp = 0;
-    //   }
-    // }
-
-    // this.mesh = new Mesh(this.geometry, this.material);
-
     this.add(this.mesh);
-    this.mesh.position.x -= 64;
-    this.mesh.position.z -= 64;
+    this.mesh.position.x -= GRID / 2;
+    this.mesh.position.z -= GRID / 2;
   }
 
   initFBO() {
     this.fbo = new FBO({
-      width: 256,
-      height: 256,
+      width: GRID,
+      height: GRID,
       name: "wind",
       // debug: true,
       uniforms: {
         uTime: { value: 0 },
+        uPointer: { value: this.target },
       },
       shader: /* glsl */ `
         precision highp float;
         uniform sampler2D texture;
         uniform float uTime;
+        uniform vec3 uPointer;
 
         //	Simplex 3D Noise 
         //	by Ian McEwan, Ashima Arts
@@ -225,6 +218,12 @@ export default class extends component(Object3D) {
                                         dot(p2,x2), dot(p3,x3) ) );
         }
 
+        float circle(vec2 uv, vec2 disc_center, float disc_radius, float border_size) {
+          uv -= disc_center;
+          float dist = sqrt(dot(uv, uv));
+          return smoothstep(disc_radius+border_size, disc_radius-border_size, dist);
+        }
+
         void main() {
           vec2 uv = gl_FragCoord.xy / RESOLUTION.xy;
           vec4 old = texture2D(texture, uv);
@@ -234,17 +233,35 @@ export default class extends component(Object3D) {
           float noise = snoise(vec3(uv.x, uv.y, uTime * 0.1));
           
           new.r += noise * 0.1;
-          new = mix(new, vec4(0.0), .1);
+          // new.g += distance(gl_FragCoord.xy - (vec2(RESOLUTION) / 2.0), vec2(uPointer.x, -uPointer.z));
+          new.g += circle(gl_FragCoord.xy, vec2(uPointer.x, uPointer.z) + (vec2(RESOLUTION) / 2.0), RESOLUTION.x * 0.1, RESOLUTION.x * 0.06) * 0.5;
+          // new.g = clamp(new.g, 0.0, 1.0);
+
+          new.r = mix(new.r, 0.0, .1);
+          new.g = mix(new.g, 0.0, .04);
           new.w = 1.0;
 
           gl_FragColor = new;
         }
       `,
-      // rtOptions: {
-      //   minFilter: LinearFilter,
-      //   magFilter: LinearFilter,
-      // },
+      rtOptions: {
+        minFilter: LinearFilter,
+        magFilter: LinearFilter,
+      },
     });
+  }
+
+  initPlane() {
+    this.plane = new Plane(new Vector3(0, 1, 0), 0);
+    this.raycaster = new Raycaster();
+    this.target = new Vector3();
+  }
+
+  onPointerMove({ pointer }) {
+    this.raycaster.setFromCamera(pointer.normalized, camera);
+    this.raycaster.ray.intersectPlane(this.plane, this.target);
+
+    console.log(this.target);
   }
 
   onRaf({ delta }) {
@@ -252,10 +269,13 @@ export default class extends component(Object3D) {
       this.fbo.uniforms.uTime.value += delta;
       this.fbo.update();
 
-      // if (this.uniforms.uWind) {
-      //   this.uniforms.uWind.value = this.fbo.target;
-      //   this.uniforms.uWind.value.needsUpdate = true;
-      // }
+      if (this.shader) {
+        this.shader.uniforms.uWind.value = this.fbo.target;
+        // this.asda.value = this.fbo.target;
+        // this.asda = { value: this.fbo.target };
+        // this.asda.value.needsUpdate = true;
+        // console.log(this.asda.value);
+      }
     }
   }
 }

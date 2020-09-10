@@ -1,6 +1,6 @@
-import { component } from 'bidello';
-import FBO from './fbo';
-import { Vector2, LinearFilter } from 'three';
+import { component } from "bidello";
+import FBO from "./fbo";
+import { Vector2, LinearFilter } from "three";
 
 const shader = `
 precision highp float;
@@ -32,15 +32,15 @@ class Trail extends component() {
     this.fbo = new FBO({
       width: 256,
       height: 256,
-      name: 'trail',
+      name: "trail",
       shader,
       uniforms: {
-        uPointer: { value: new Vector2() }
+        uPointer: { value: new Vector2() },
       },
-      rtOptions: {
-        minFilter: LinearFilter,
-        magFilter: LinearFilter,
-      },
+      // rtOptions: {
+      //   minFilter: LinearFilter,
+      //   magFilter: LinearFilter,
+      // },
       // debug: true,
     });
 
@@ -50,7 +50,7 @@ class Trail extends component() {
   onPointerMove({ pointer }) {
     this.pointerTarget.set(
       pointer.x / window.innerWidth,
-      1 - (pointer.y / window.innerHeight)
+      1 - pointer.y / window.innerHeight
     );
   }
 
