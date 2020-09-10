@@ -11,13 +11,17 @@ const tier = getGPUTier({
 
 const dpr = Math.min(1.5, window.devicePixelRatio || 1);
 
+const url = new URLSearchParams(window.location.search)
 const settings = {
-  count: 64,
-  shadowmap: 1024,
+  count: url.get('count') || 64,
+  shadowmap: url.get('shadow') || 1024,
   tier,
   dpr,
   fxaa: true,
 };
+
+settings.count = parseInt(settings.count)
+settings.shadowmap = parseInt(settings.shadowmap)
 
 console.log(`⚙️ settings`, settings);
 
