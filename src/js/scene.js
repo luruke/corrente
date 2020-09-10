@@ -25,8 +25,8 @@ class Stage extends component(Scene) {
     const directional = new DirectionalLight(0xfff, 20);
     directional.castShadow = true;
     directional.position.set((c / 2) + 10, 10, 0)
-    directional.shadow.mapSize.width = 1024; // default
-    directional.shadow.mapSize.height = 1024; // default
+    directional.shadow.mapSize.width = settings.shadowmap; // default
+    directional.shadow.mapSize.height = settings.shadowmap; // default
     directional.shadow.camera.near = 1; // default
     directional.shadow.camera.far = c + 13; // default
     directional.shadow.camera.left = -((c / 2) + 5); // default

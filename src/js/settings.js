@@ -13,6 +13,7 @@ const dpr = Math.min(1.5, window.devicePixelRatio || 1);
 
 const settings = {
   count: 64,
+  shadowmap: 1024,
   tier,
   dpr,
   fxaa: true,
