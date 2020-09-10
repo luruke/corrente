@@ -33,8 +33,9 @@ class Stage extends component(Scene) {
     directional.shadow.camera.right = (c / 2) + 5; // default
     directional.shadow.camera.top = 13; // default
     directional.shadow.camera.bottom = -13; // default
-    // directional.shadow.bias = 0.001;
-    // directional.shadow.normalBias = 0.01;
+    // directional.shadow.bias = 0.000001;
+    directional.shadow.normalBias = 0.1;
+    directional.shadow.radius = 1.4;
 
 
     // var helper = new CameraHelper(directional.shadow.camera);
